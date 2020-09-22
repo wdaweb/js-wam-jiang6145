@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+    <style>
+      body,
+      html {
+        height: 100vh;
+        padding: 0;
+        margin: 0;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+      #game {
+        border-collapse: collapse;
+      }
+      #game td {
+        width: 100px;
+        height: 100px;
+        border: 1px solid #ccc;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="container">
+      <table id="game">
+        <tr>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+        <tr>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+        <tr>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+      </table>
+      <input id="btn-start" type="button" value="開始遊戲" />
+    </div>
+
+    <!-- JS -->
+    <script>
+      const boxs = document.querySelectorAll('#game td');
+      const btnStart = document.querySelector('#btn-start');
+
+      let score = 0; // 計分數
+      let isStartGame = false; // 是否遊戲開始
+      let gameTimer = 0; // 遊戲計時器
+      let roundTimer = 0; // 每回合倒數計時器
+      let targetIndex = 0; // 目標位置
+      // let targetClick = false; // 是否點擊到同顏色的方塊
+      let colorMin = 0;
+      let colorMax = 255;
+
+      function random(min, max) {
+        return Math.floor(Math.random() * (max - min + 1) + min);
+      }
+
+      // GAME randomColor Box
+      function game(colorMin, colorMax) {
+        // 8格顏色一樣, 1格顏色不同, 差異越來越不明顯
+        console.log(colorMin, colorMax);
+        const colorArr = [];
+        const colorTarget = [];
+        targetIndex = random(0, 8);
+        for (let i = 0; i < 3; i++) {
+          colorArr[i] = random(colorMin, colorMax);
+          colorTarget[i] = random(colorMin, colorMax);
+        }
+        for (let i = 0; i < boxs.length; i++) {
+          boxs[i].style.background = i === targetIndex ? `rgb(${colorTarget.join()})` : `rgb(${colorArr.join()})`;
+        }
+      }
+
+      // 每回合倒數 Function
+      function roundTimeReciprocal() {
+        let roundSec = 10;
+        roundTimer = setInterval(() => {
+          roundSec--;
+          console.log(roundSec);
+          if (roundSec === 0) {
+            console.log('LOSE');
+            isStartGame = false;
+            score = 0;
+            level = 0;
+            colorMin = 0;
+            colorMax = 255;
+            clearInterval(roundTimer);
+            clearInterval(gameTimer);
+          }
+        }, 1000);
+      }
+
+      // 點擊判斷 Function
+      function clickHandler(e) {
+        if (boxs[targetIndex] === e.target) {
+          score += 10; //點對 +10 分
+          colorMin += 5;
+          colorMax -= 5;
+          // 每回倒數計時重開
+          clearInterval(roundTimer);
+          roundTimeReciprocal();
+          // 下一關
+        } else {
+          score -= 2; //點錯 -2 分
+        }
+      }
+      btnStart.addEventListener('click', (e) => {
+        console.log('Game Start');
+        btnStart.disabled = true;
+        isStartGame = true;
+
+        // 遊戲
+        gameTimer = setInterval(() => {
+          game(colorMin, colorMax);
+        }, 1000);
+        game(colorMin, colorMax);
+
+        // 每回合倒計時
+        roundTimeReciprocal();
+      });
+
+      for (let i = 0; i < boxs.length; i++) {
+        boxs[i].addEventListener('click', clickHandler);
+      }
+    </script>
+  </body>
+</html>
