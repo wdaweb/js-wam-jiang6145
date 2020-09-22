@@ -5,6 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Document</title>
     <style>
+      * {
+        padding: 0;
+        margin: 0;
+        box-sizing: border-box;
+      }
       body,
       html {
         height: 100vh;
@@ -13,124 +18,148 @@
         display: flex;
         justify-content: center;
         align-items: center;
+        background-color: rgb(40, 40, 40);
       }
-      #game {
-        border-collapse: collapse;
+      #gameBox {
+        width: 700px;
+        height: 700px;
+        border-spacing: 5px;
       }
-      #game td {
-        width: 100px;
-        height: 100px;
-        border: 1px solid #ccc;
+      #gameBox td {
+        border-radius: 6px;
+        cursor: pointer;
+        /* background-color: cadetblue; */
       }
     </style>
   </head>
   <body>
     <div id="container">
-      <table id="game">
-        <tr>
-          <td></td>
-          <td></td>
-          <td></td>
-        </tr>
-        <tr>
-          <td></td>
-          <td></td>
-          <td></td>
-        </tr>
-        <tr>
-          <td></td>
-          <td></td>
-          <td></td>
-        </tr>
-      </table>
+      <table id="gameBox"></table>
       <input id="btn-start" type="button" value="開始遊戲" />
     </div>
 
     <!-- JS -->
     <script>
-      const boxs = document.querySelectorAll('#game td');
+      const gameBox = document.querySelector('#gameBox');
       const btnStart = document.querySelector('#btn-start');
+      let boxs = null;
 
       let score = 0; // 計分數
       let isStartGame = false; // 是否遊戲開始
       let gameTimer = 0; // 遊戲計時器
-      let roundTimer = 0; // 每回合倒數計時器
+      let gameTime = 60; // 遊戲時間
       let targetIndex = 0; // 目標位置
-      // let targetClick = false; // 是否點擊到同顏色的方塊
-      let colorMin = 0;
-      let colorMax = 255;
+      let boxNum = 3; // 盒子數量
+      let targetColor = []; // 存放目標盒子每回合的的顏色
+      let differentColor = []; // 存放其它盒子每回合的的顏色
+      let differentValue = []; // 存放其它盒子與目標盒子的 rgb 差異的值
+      let nowRound = 0; // 現在第幾關
+      const round = 30; // 關卡總數
 
       function random(min, max) {
         return Math.floor(Math.random() * (max - min + 1) + min);
       }
-
-      // GAME randomColor Box
-      function game(colorMin, colorMax) {
-        // 8格顏色一樣, 1格顏色不同, 差異越來越不明顯
-        console.log(colorMin, colorMax);
-        const colorArr = [];
-        const colorTarget = [];
-        targetIndex = random(0, 8);
-        for (let i = 0; i < 3; i++) {
-          colorArr[i] = random(colorMin, colorMax);
-          colorTarget[i] = random(colorMin, colorMax);
-        }
-        for (let i = 0; i < boxs.length; i++) {
-          boxs[i].style.background = i === targetIndex ? `rgb(${colorTarget.join()})` : `rgb(${colorArr.join()})`;
-        }
-      }
-
-      // 每回合倒數 Function
-      function roundTimeReciprocal() {
-        let roundSec = 10;
-        roundTimer = setInterval(() => {
-          roundSec--;
-          console.log(roundSec);
-          if (roundSec === 0) {
-            console.log('LOSE');
-            isStartGame = false;
-            score = 0;
-            level = 0;
-            colorMin = 0;
-            colorMax = 255;
-            clearInterval(roundTimer);
-            clearInterval(gameTimer);
+      // 創建 table
+      function creatTable(num) {
+        gameBox.innerHTML = '';
+        for (let i = 0; i < num; i++) {
+          const tr = gameBox.insertRow(0);
+          for (let j = 0; j < num; j++) {
+            const td = tr.insertCell(0);
           }
-        }, 1000);
+        }
+        boxs = gameBox.querySelectorAll('td');
+        // console.log(boxs);
       }
-
+      // 創建 BOX 顏色
+      function creatColors() {
+        for (let i = 0; i < round; i++) {
+          targetColor[i] = [];
+          differentColor[i] = [];
+          differentValue[i] = random(220 / (i + 2), 230 / (i + 2)) * (Math.random() > 0.5 ? 1 : -1);
+          for (let j = 0; j < 3; j++) {
+            const rgbValue = random(0, 255);
+            targetColor[i][j] = rgbValue;
+            differentColor[i][j] =
+              rgbValue + differentValue[i] > 255 || rgbValue + differentValue[i] < 0
+                ? rgbValue - differentValue[i]
+                : rgbValue + differentValue[i];
+            if (targetColor[i][j] === differentColor[i][j]) {
+              console.log('重複');
+              j--;
+            } // 如果值相同則在重新跑一次
+          }
+          console.log(targetColor);
+          console.log(differentColor);
+        }
+        // console.log(differentColor);
+        // console.log(targetColor);
+      }
+      // 創建 8格顏色一樣, 1格顏色不同的 BOX
+      function game() {
+        if (!isStartGame) return;
+        // console.log(boxs.length);
+        targetIndex = random(0, boxs.length);
+        for (let i = 0; i < boxs.length; i++) {
+          boxs[i].style.background =
+            i === targetIndex ? `rgb(${targetColor[nowRound].join()})` : `rgb(${differentColor[nowRound].join()})`;
+          // console.log(boxs[i]);
+        }
+        // console.log(nowRound);
+        // console.log(targetIndex);
+      }
       // 點擊判斷 Function
       function clickHandler(e) {
-        if (boxs[targetIndex] === e.target) {
-          score += 10; //點對 +10 分
-          colorMin += 5;
-          colorMax -= 5;
-          // 每回倒數計時重開
-          clearInterval(roundTimer);
-          roundTimeReciprocal();
+        if (!isStartGame) return;
+        if (e.target === boxs[targetIndex]) {
+          score += 10; // 點對 +10 分
+          nowRound++;
+          if (boxNum < 9) boxNum++;
+          creatTable(boxNum);
+          game();
           // 下一關
         } else {
-          score -= 2; //點錯 -2 分
+          score -= 2; // 點錯 -2 分
         }
       }
+      // 結束遊戲
+      function gameEnd() {
+        clearInterval(gameTimer);
+        btnStart.disabled = false;
+        isStartGame = false;
+        gameTime = 60;
+        nowRound = 0;
+        boxNum = 3;
+        targetColor = [];
+        differentColor = [];
+        differentValue = [];
+        console.log('遊戲結束');
+      }
+
+      // 初始畫面
+      creatTable(3);
+      // 點擊遊戲開始
       btnStart.addEventListener('click', (e) => {
         console.log('Game Start');
         btnStart.disabled = true;
         isStartGame = true;
 
-        // 遊戲
+        // 遊戲計時
         gameTimer = setInterval(() => {
-          game(colorMin, colorMax);
+          gameTime--;
+          if (gameTime === 0) {
+            gameEnd();
+          }
         }, 1000);
-        game(colorMin, colorMax);
-
-        // 每回合倒計時
-        roundTimeReciprocal();
+        // 執行遊戲
+        creatColors();
+        game();
       });
 
-      for (let i = 0; i < boxs.length; i++) {
-        boxs[i].addEventListener('click', clickHandler);
-      }
+      gameBox.addEventListener('click', (e) => {
+        if (e.target.tagName !== 'TD') return;
+        clickHandler(e);
+      });
     </script>
   </body>
 </html>
