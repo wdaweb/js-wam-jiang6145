@@ -89,8 +89,6 @@
               j--;
             } // 如果值相同則在重新跑一次
           }
-          console.log(targetColor);
-          console.log(differentColor);
         }
         // console.log(differentColor);
         // console.log(targetColor);
@@ -99,7 +97,7 @@
       function game() {
         if (!isStartGame) return;
         // console.log(boxs.length);
-        targetIndex = random(0, boxs.length);
+        targetIndex = random(0, boxs.length - 1);
         for (let i = 0; i < boxs.length; i++) {
           boxs[i].style.background =
             i === targetIndex ? `rgb(${targetColor[nowRound].join()})` : `rgb(${differentColor[nowRound].join()})`;
