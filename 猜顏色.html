@@ -4,6 +4,12 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Document</title>
+    <link
+      rel="stylesheet"
+      href="https://use.fontawesome.com/releases/v5.14.0/css/all.css"
+      integrity="sha384-HzLeBuhoNPvSl5KYnjx0BT+WB0QEEqLprO+NBkkk5gbc67FTaL7XIGa2w1L0Xbgc"
+      crossorigin="anonymous"
+    />
     <style>
       * {
         padding: 0;
@@ -18,30 +24,148 @@
         display: flex;
         justify-content: center;
         align-items: center;
-        background-color: rgb(40, 40, 40);
+        background-color: rgb(43, 48, 58);
+        font-family: '微軟正黑體';
       }
+      /* game */
       #gameBox {
-        width: 700px;
-        height: 700px;
+        margin-top: 20px;
+        width: 500px;
+        height: 500px;
         border-spacing: 5px;
       }
       #gameBox td {
         border-radius: 6px;
         cursor: pointer;
-        /* background-color: cadetblue; */
+        background-color: #ccc;
+      }
+      /* game text */
+      .time-text {
+        font-size: 1.8rem;
+        font-weight: 900;
+        letter-spacing: 2px;
+        color: #fff;
+      }
+      .time-bar {
+        width: 50%;
+        height: 12px;
+        margin-top: 10px;
+        border: 2px solid #fff;
+        border-radius: 12px;
+      }
+      .time-bar > .time-line {
+        width: 100%;
+        height: 100%;
+        background-color: rgb(214, 73, 51);
+        border-radius: 12px;
+      }
+
+      .time-text::before {
+        display: inline-block;
+        content: '\f017';
+        margin-right: 10px;
+        font-family: 'Font Awesome 5 Free';
+        font-weight: 900;
+        font-size: 28px;
+        color: #fff;
+        transform-origin: center center;
+      }
+      .time-text.sway::before {
+        animation: sway 0.5s infinite;
+      }
+      @keyframes sway {
+        0% {
+          transform: rotate(-20deg);
+        }
+        50% {
+          transform: rotate(20deg);
+        }
+        100% {
+          transform: rotate(-20deg);
+        }
+      }
+      /* game btns */
+      #btns-wrap {
+        margin-top: 20px;
+      }
+      .btn {
+        padding: 0 12px;
+        border: none;
+        outline: none;
+        cursor: pointer;
+        background-color: transparent;
+        font-size: 1.5rem;
+        font-weight: 900;
+        border-radius: 10px;
+        background-color: rgb(214, 73, 51);
+        color: rgb(43, 48, 58);
+        transition: 0.3s;
+      }
+      .btn:hover {
+        color: rgb(214, 73, 51);
+        background-color: transparent;
+        transform: translateY(-10px);
+        text-shadow: 0 10px 3px rgba(0, 0, 0, 0.5);
+      }
+      .btn:active {
+        transform: translateY(-5px);
+        text-shadow: 0 5px 6px rgba(0, 0, 0, 0.5);
+      }
+      .btn-start {
+        display: block;
+        margin-bottom: 20px;
+        width: 100%;
+        font-size: 2.2rem;
+      }
+      .btn-restart {
+        display: none;
+      }
+      .btn-highest-score,
+      .btn-rule {
+        margin-left: 37px;
       }
     </style>
   </head>
   <body>
-    <div id="container">
-      <table id="gameBox"></table>
-      <input id="btn-start" type="button" value="開始遊戲" />
+    <div class="container">
+      <div id="text-wrap">
+        <p class="time-text"></p>
+        <div class="time-bar">
+          <div class="time-line"></div>
+        </div>
+      </div>
+      <table id="gameBox">
+        <tr>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+        <tr>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+        <tr>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+      </table>
+      <div id="btns-wrap">
+        <input class="btn btn-start" type="button" value="PLAY" />
+        <input class="btn btn-restart" type="button" value="RESTART" />
+        <input class="btn btn-pause" type="button" value="PAUSE" />
+        <input class="btn btn-highest-score" type="button" value="Highest Score" />
+        <input class="btn btn-rule" type="button" value="RULE" />
+      </div>
     </div>
 
     <!-- JS -->
     <script>
       const gameBox = document.querySelector('#gameBox');
-      const btnStart = document.querySelector('#btn-start');
+      const btnStart = document.querySelector('.btn-start');
+      const timeText = document.querySelector('.time-text');
+      const timeLine = document.querySelector('.time-line');
       let boxs = null;
 
       let score = 0; // 計分數
@@ -69,42 +193,30 @@
           }
         }
         boxs = gameBox.querySelectorAll('td');
-        // console.log(boxs);
       }
       // 創建 BOX 顏色
       function creatColors() {
         for (let i = 0; i < round; i++) {
           targetColor[i] = [];
           differentColor[i] = [];
-          differentValue[i] = random(220 / (i + 2), 230 / (i + 2)) * (Math.random() > 0.5 ? 1 : -1);
+          differentValue[i] = random(200 / (i + 2), 210 / (i + 2)) * (Math.random() > 0.5 ? 1 : -1);
           for (let j = 0; j < 3; j++) {
             const rgbValue = random(0, 255);
             targetColor[i][j] = rgbValue;
-            differentColor[i][j] =
-              rgbValue + differentValue[i] > 255 || rgbValue + differentValue[i] < 0
-                ? rgbValue - differentValue[i]
-                : rgbValue + differentValue[i];
-            if (targetColor[i][j] === differentColor[i][j]) {
-              console.log('重複');
-              j--;
-            } // 如果值相同則在重新跑一次
+            differentColor[i][j] = rgbValue + differentValue[i];
+            if (targetColor[i][j] === differentColor[i][j] || differentColor[i][j] < 0 || differentColor[i][j] > 255)
+              j--; // 如果值相同則在重新跑一次
           }
         }
-        // console.log(differentColor);
-        // console.log(targetColor);
       }
       // 創建 8格顏色一樣, 1格顏色不同的 BOX
       function game() {
         if (!isStartGame) return;
-        // console.log(boxs.length);
         targetIndex = random(0, boxs.length - 1);
         for (let i = 0; i < boxs.length; i++) {
           boxs[i].style.background =
             i === targetIndex ? `rgb(${targetColor[nowRound].join()})` : `rgb(${differentColor[nowRound].join()})`;
-          // console.log(boxs[i]);
         }
-        // console.log(nowRound);
-        // console.log(targetIndex);
       }
       // 點擊判斷 Function
       function clickHandler(e) {
@@ -119,6 +231,7 @@
         } else {
           score -= 2; // 點錯 -2 分
         }
+        console.log('遊戲中');
       }
       // 結束遊戲
       function gameEnd() {
@@ -131,9 +244,16 @@
         targetColor = [];
         differentColor = [];
         differentValue = [];
-        console.log('遊戲結束');
       }
 
+      function gameTimeHandler() {
+        timeText.innerText = gameTime--;
+        if (gameTime < 0) {
+          gameEnd();
+          timeText.innerText = 'GAME END';
+        }
+        // timeLine.style.width = `${gameTime * 10}%`;
+      }
       // 初始畫面
       creatTable(3);
       // 點擊遊戲開始
@@ -141,14 +261,9 @@
         console.log('Game Start');
         btnStart.disabled = true;
         isStartGame = true;
-
         // 遊戲計時
-        gameTimer = setInterval(() => {
-          gameTime--;
-          if (gameTime === 0) {
-            gameEnd();
-          }
-        }, 1000);
+        gameTimer = setInterval(gameTimeHandler, 1000);
+        timeText.innerText = gameTime--;
         // 執行遊戲
         creatColors();
         game();
