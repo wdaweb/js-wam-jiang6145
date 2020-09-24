@@ -4,12 +4,16 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Document</title>
+    <!-- fontawesome -->
     <link
       rel="stylesheet"
       href="https://use.fontawesome.com/releases/v5.14.0/css/all.css"
       integrity="sha384-HzLeBuhoNPvSl5KYnjx0BT+WB0QEEqLprO+NBkkk5gbc67FTaL7XIGa2w1L0Xbgc"
       crossorigin="anonymous"
     />
+    <!-- animate.css CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" />
+
     <style>
       * {
         padding: 0;
@@ -28,16 +32,32 @@
         font-family: '微軟正黑體';
       }
       /* game */
-      #gameBox {
+      #game-wrap {
+        position: relative;
+      }
+      .gameBox {
         margin-top: 20px;
         width: 500px;
         height: 500px;
         border-spacing: 5px;
       }
-      #gameBox td {
+      .gameBox td {
         border-radius: 6px;
         cursor: pointer;
         background-color: #ccc;
+      }
+      /* 對話視窗框 */
+      .mask {
+        content: '';
+        width: 100%;
+        height: 100%;
+        position: absolute;
+        top: 0;
+        left: 0;
+        background-color: rgba(0, 0, 0);
+        border-radius: 10px;
+        opacity: 0.8;
+        z-index: 1;
       }
       /* game text */
       .time-text {
@@ -47,6 +67,7 @@
         color: #fff;
       }
       .time-bar {
+        display: inline-block;
         width: 50%;
         height: 12px;
         margin-top: 10px;
@@ -73,6 +94,13 @@
       .time-text.sway::before {
         animation: sway 0.5s infinite;
       }
+      .score-text {
+        font-size: 28px;
+        display: inline-block;
+        color: #fff;
+        font-weight: 900;
+        padding-left: 100px;
+      }
       @keyframes sway {
         0% {
           transform: rotate(-20deg);
@@ -89,7 +117,7 @@
         margin-top: 20px;
       }
       .btn {
-        padding: 0 12px;
+        padding: 3px 15px;
         border: none;
         outline: none;
         cursor: pointer;
@@ -116,13 +144,14 @@
         margin-bottom: 20px;
         width: 100%;
         font-size: 2.2rem;
+        letter-spacing: 10px;
       }
-      .btn-restart {
+      .btn-pause {
         display: none;
       }
-      .btn-highest-score,
-      .btn-rule {
-        margin-left: 37px;
+      .btns-bottom {
+        display: flex;
+        justify-content: space-between;
       }
     </style>
   </head>
@@ -133,45 +162,58 @@
         <div class="time-bar">
           <div class="time-line"></div>
         </div>
+        <div class="score-text"></div>
       </div>
-      <table id="gameBox">
-        <tr>
-          <td></td>
-          <td></td>
-          <td></td>
-        </tr>
-        <tr>
-          <td></td>
-          <td></td>
-          <td></td>
-        </tr>
-        <tr>
-          <td></td>
-          <td></td>
-          <td></td>
-        </tr>
-      </table>
+      <div id="game-wrap">
+        <table class="gameBox">
+          <tr>
+            <td></td>
+            <td></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td></td>
+            <td></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td></td>
+            <td></td>
+            <td></td>
+          </tr>
+        </table>
+        <div class="mask"></div>
+      </div>
       <div id="btns-wrap">
-        <input class="btn btn-start" type="button" value="PLAY" />
-        <input class="btn btn-restart" type="button" value="RESTART" />
-        <input class="btn btn-pause" type="button" value="PAUSE" />
-        <input class="btn btn-highest-score" type="button" value="Highest Score" />
-        <input class="btn btn-rule" type="button" value="RULE" />
+        <input class="btn btn-start" type="button" value="遊戲開始" />
+        <!-- <input class="btn btn-pause" type="button" value="暫停" /> -->
+        <div class="btns-bottom">
+          <input class="btn btn-restart" type="button" value="重新開始" />
+          <input class="btn btn-highest-score" type="button" value="最高分紀錄" />
+          <input class="btn btn-rule" type="button" value="遊戲規則" />
+        </div>
       </div>
     </div>
 
     <!-- JS -->
     <script>
-      const gameBox = document.querySelector('#gameBox');
-      const btnStart = document.querySelector('.btn-start');
-      const timeText = document.querySelector('.time-text');
+      const gameBox = document.querySelector('.gameBox');
+      const mask = document.querySelector('.mask');
+
+      const btnStart = document.querySelector('.btn-start'); // 開始按鈕
+      const btnRestart = document.querySelector('.btn-restart'); // 重新開始按鈕
+      const btnHighest = document.querySelector('.btn-highest-score'); // 最高分數按鈕
+      const btnRule = document.querySelector('.btn-rule'); // 遊戲規則按鈕
+
       const timeLine = document.querySelector('.time-line');
+      const timeText = document.querySelector('.time-text');
+      const scoreText = document.querySelector('.score-text');
       let boxs = null;
 
       let score = 0; // 計分數
       let isStartGame = false; // 是否遊戲開始
-      let gameTimer = 0; // 遊戲計時器
-      let gameTime = 60; // 遊戲時間
+      let gameTimer = null; // 遊戲計時器
+      let gameTime = 10; // 遊戲時間
       let targetIndex = 0; // 目標位置
       let boxNum = 3; // 盒子數量
       let targetColor = []; // 存放目標盒子每回合的的顏色
@@ -231,44 +273,89 @@
         } else {
           score -= 2; // 點錯 -2 分
         }
+        scoreText.innerText = `分數 : ${score}`;
         console.log('遊戲中');
       }
       // 結束遊戲
       function gameEnd() {
         clearInterval(gameTimer);
-        btnStart.disabled = false;
         isStartGame = false;
-        gameTime = 60;
+        gameTime = 10;
         nowRound = 0;
         boxNum = 3;
+        score = 0;
         targetColor = [];
         differentColor = [];
         differentValue = [];
+        btnStart.value = '遊戲開始';
+        timeText.innerText = gameTime;
+        timeLine.style.width = '100%';
+        scoreText.innerText = `分數 : ${score}`;
       }
-
+      // 時間處理
       function gameTimeHandler() {
-        timeText.innerText = gameTime--;
-        if (gameTime < 0) {
+        gameTime--;
+        timeLine.style.width = `${gameTime * 10}%`;
+        if (gameTime === 0) {
           gameEnd();
-          timeText.innerText = 'GAME END';
+          timeText.classList.remove('sway');
+        } else {
+          timeText.innerText = gameTime;
         }
-        // timeLine.style.width = `${gameTime * 10}%`;
+        console.log(gameTime);
+        console.log(gameTimer);
       }
       // 初始畫面
       creatTable(3);
-      // 點擊遊戲開始
+      timeText.innerText = gameTime;
+      scoreText.innerText = `分數 : ${score}`;
+
+      // 遊戲開始按鈕
       btnStart.addEventListener('click', (e) => {
-        console.log('Game Start');
-        btnStart.disabled = true;
+        if (btnStart.value === '遊戲開始') {
+          isStartGame = true;
+          // 遊戲計時
+          btnStart.value = '暫停';
+          gameTimer = setInterval(gameTimeHandler, 1000);
+          timeText.classList.add('sway');
+          // 執行遊戲
+          creatColors();
+          game();
+          // 遮罩
+          mask.style.opacity = 0;
+          mask.style.zIndex = -1;
+        } else if (btnStart.value === '暫停') {
+          // 遊戲暫停
+          clearInterval(gameTimer);
+          gameTimer = null;
+          isStartGame = false;
+          btnStart.value = '繼續';
+          timeText.classList.remove('sway');
+          mask.style.backgroundColor = 'rgb(214, 73, 51)';
+          // mask.style.opacity = 0.8;
+          mask.style.zIndex = 1;
+        } else {
+          gameTimer = setInterval(gameTimeHandler, 1000);
+          btnStart.value = '暫停';
+          isStartGame = true;
+          timeText.classList.add('sway');
+          mask.style.opacity = 0;
+          mask.style.zIndex = -1;
+        }
+      });
+      // 重新開始
+      btnRestart.addEventListener('click', () => {
+        if (!isStartGame && btnStart.value !== '繼續') return;
+        console.log('重新開始');
+        // 清楚計時器在啟動, 所有東西還原初始
+        gameEnd();
+        btnStart.value = '暫停';
         isStartGame = true;
-        // 遊戲計時
         gameTimer = setInterval(gameTimeHandler, 1000);
-        timeText.innerText = gameTime--;
-        // 執行遊戲
+        creatTable(3);
         creatColors();
         game();
       });
-
       gameBox.addEventListener('click', (e) => {
         if (e.target.tagName !== 'TD') return;
         clickHandler(e);
