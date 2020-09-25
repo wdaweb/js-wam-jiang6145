@@ -48,16 +48,31 @@
       }
       /* 對話視窗框 */
       .mask {
-        content: '';
         width: 100%;
         height: 100%;
         position: absolute;
         top: 0;
         left: 0;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
         background-color: rgba(0, 0, 0);
         border-radius: 10px;
-        opacity: 0.8;
-        z-index: -1;
+        opacity: 0.9;
+        z-index: 1;
+        transition: 0.3s;
+        font-weight: 900;
+        letter-spacing: 5px;
+        color: rgba(255, 255, 255.8);
+      }
+      .mask > h2 {
+        font-size: 50px;
+      }
+      .mask > p {
+        font-size: 20px;
+        text-align: left;
+        line-height: 3;
       }
       /* game text */
       .time-text {
@@ -182,14 +197,16 @@
             <td></td>
           </tr>
         </table>
-        <div class="mask"></div>
+        <div class="mask">
+          <!-- 顯示對應的內容 -->
+        </div>
       </div>
       <div id="btns-wrap">
         <input class="btn btn-start" type="button" value="遊戲開始" />
         <!-- <input class="btn btn-pause" type="button" value="暫停" /> -->
         <div class="btns-bottom">
           <input class="btn btn-restart" type="button" value="重新開始" />
-          <input class="btn btn-highest-score" type="button" value="最高分紀錄" />
+          <input class="btn btn-highscore" type="button" value="最高分紀錄" />
           <input class="btn btn-rule" type="button" value="遊戲規則" />
         </div>
       </div>
@@ -204,13 +221,11 @@
 
       const btnsWrap = document.querySelector('#btns-wrap'); // 所有按鈕容器
       const btnStart = document.querySelector('.btn-start'); // 開始按鈕
-      const btnRestart = document.querySelector('.btn-restart'); // 重新開始按鈕
-      const btnRule = document.querySelector('.btn-rule'); // 遊戲規則按鈕
-      const btnHighest = document.querySelector('.btn-highest-score'); // 最高分數按鈕
 
       const timeLine = document.querySelector('.time-line'); // 時間條
       const timeText = document.querySelector('.time-text'); // 時間文字
       const scoreText = document.querySelector('.score-text'); // 分數文字
+
       // 遊戲變數 --------------------------------------------------------------------------------------------------------------
       let isStartGame = false; // 遊戲是否開始
       let gridsNum = 3; // table 初始為 3*3
@@ -220,10 +235,31 @@
       let gameTimeing = totalTime; // 遊戲倒數計時
       let targetIndex = 0; // 正確盒子位置
       let score = 0; // 紀錄分數
+      const addScore = 10;
+      const loseScore = 2;
+      let highscore = { name: '', score: 0 };
+      let highscoreStorage = JSON.parse(localStorage.getItem('highscore'));
+      console.log(highscoreStorage);
 
-      // 畫面初始化
+      // mask 文本內容 --------------------------------------------------------------------------------------------------------------
+      const maskPauseText = '<h2>遊戲暫停...</h2>';
+      const maskRuleText = `
+      <h2>試試你的眼力吧 !</h2>
+      <p>1. 找出唯一不同顏色的格子加 ${addScore} 分</p>
+      <p>2. 找錯扣 ${loseScore} 分</p>
+      <p>3. 遊戲時間 ${totalTime} 秒</p>
+      `;
+      const maskHighestScoreText = !highscoreStorage
+        ? '<p>還沒有最高分...</p>'
+        : `<h2>最高分 : ${highscore.score}</h2>
+        <p>玩家 : ${highscore.name}</p>`;
+
+      // 畫面初始化 --------------------------------------------------------------------------------------------------------------
       timeText.innerText = gameTimeing;
       scoreText.innerText = `分數 : ${score}`;
+      if (highscoreStorage) {
+        highscore = highscoreStorage;
+      }
 
       // Function --------------------------------------------------------------------------------------------------------------
       // 取隨機整數
@@ -284,6 +320,8 @@
         btnStart.value = '遊戲開始';
         creatGrids(gridsNum);
         clearInterval(timer);
+        if (!highscoreStorage || highscoreStorage.score < score)
+          highscoreStorage.localStorage.setItem('highscore', JSON.stringify(highscore));
       }
 
       // Event --------------------------------------------------------------------------------------------------------------
@@ -297,14 +335,22 @@
             creatGrids(gridsNum); // 創建 3*3 格子
             randomColorGrids(); // 啟動遊戲, 每次隨機創建顏色格子
             timer = setInterval(timeHandler, 1000); // 遊戲時間倒數計時
+            mask.style.zIndex = -1;
+            mask.style.opacity = 0;
             e.target.value = '暫停';
           } else if (thisValue === '暫停') {
             isStartGame = false;
             clearInterval(timer);
+            mask.innerHTML = maskPauseText;
+            mask.style.zIndex = 1;
+            mask.style.opacity = 0.9;
+
             e.target.value = '繼續遊戲';
           } else {
             isStartGame = true;
             timer = setInterval(timeHandler, 1000);
+            mask.style.zIndex = -1;
+            mask.style.opacity = 0;
             e.target.value = '暫停';
           }
         }
@@ -314,13 +360,21 @@
           isStartGame = true;
           randomColorGrids();
           timer = setInterval(timeHandler, 1000);
+          mask.style.zIndex = -1;
+          mask.style.opacity = 0;
           btnStart.value = '暫停';
         }
         // 規則按鈕
-        if (thisClass.includes('btn-rule')) {
+        if (thisClass.includes('btn-rule') && !isStartGame) {
+          mask.innerHTML = maskRuleText;
+          mask.style.zIndex = 1;
+          mask.style.opacity = 0.9;
         }
         // 最高分紀錄按鈕
-        if (thisClass.includes('bbtn-highest-score')) {
+        if (thisClass.includes('btn-highscore') && !isStartGame) {
+          mask.innerHTML = maskHighestScoreText;
+          mask.style.zIndex = 1;
+          mask.style.opacity = 0.9;
         }
       });
 
@@ -328,13 +382,13 @@
       gameBox.addEventListener('click', (e) => {
         if (e.target.tagName !== 'TD' || !isStartGame) return;
         if (e.target === gameGrids[targetIndex]) {
-          score += 10; // 點對 +10 分
+          score += addScore; // 點對 +10 分
           nowRound++;
           if (gridsNum < 9) gridsNum++;
           creatGrids(gridsNum);
           randomColorGrids();
         } else {
-          score -= 2; // 點錯 -2 分
+          score -= loseScore; // 點錯 -2 分
         }
         scoreText.innerText = `分數 : ${score}`;
       });
