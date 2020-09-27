@@ -30,10 +30,13 @@
         align-items: center;
         background-color: rgb(43, 48, 58);
         font-family: '微軟正黑體';
+        font-weight: 700;
+        color: rgba(255, 255, 255, 0.9);
       }
-      /* game */
+
       #game-wrap {
         position: relative;
+        font-size: 1.8rem;
       }
       .game-box {
         margin-top: 20px;
@@ -41,12 +44,34 @@
         height: 500px;
         border-spacing: 5px;
       }
+      .game-box.awaitStart {
+        background: url('./images/awaitStart.svg') no-repeat 50% 50% / 50% 50%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-size: 1.5em;
+        letter-spacing: 6px;
+      }
       .game-box td {
         border-radius: 6px;
         cursor: pointer;
-        background-color: #ccc;
       }
-      /* 對話視窗框 */
+
+      .active-img {
+        width: 100%;
+        height: 100%;
+        position: absolute;
+        top: 0;
+        left: 0;
+        background-repeat: no-repeat;
+        background-position: center center;
+        display: none;
+      }
+      .active-img.animate__animated.animate__bounceIn {
+        display: inline-block;
+        --animate-duration: 0.3s;
+      }
+
       .mask {
         width: 100%;
         height: 100%;
@@ -59,27 +84,39 @@
         align-items: center;
         background-color: rgba(0, 0, 0);
         border-radius: 10px;
-        opacity: 0.9;
-        z-index: 1;
+        opacity: 0;
+        z-index: -1;
         transition: 0.3s;
-        font-weight: 900;
-        letter-spacing: 5px;
-        color: rgba(255, 255, 255.8);
       }
       .mask > h2 {
-        font-size: 50px;
+        font-size: 36px;
+        letter-spacing: 5px;
       }
       .mask > p {
-        font-size: 20px;
-        text-align: left;
+        font-size: 26px;
         line-height: 3;
       }
-      /* game text */
-      .time-text {
+      .mask-close {
+        font-size: 2rem;
+        position: absolute;
+        top: 15px;
+        right: 15px;
+        opacity: 0;
+        z-index: -1;
+        transition: 0.3s;
+        cursor: pointer;
+      }
+      .mask-close.show {
+        opacity: 0.9;
+        z-index: 1;
+      }
+      .mask-close.show:hover {
+        color: rgb(214, 73, 51);
+      }
+
+      #text-wrap {
         font-size: 1.8rem;
-        font-weight: 900;
         letter-spacing: 2px;
-        color: #fff;
       }
       .time-bar {
         display: inline-block;
@@ -101,20 +138,14 @@
         content: '\f017';
         margin-right: 10px;
         font-family: 'Font Awesome 5 Free';
-        font-weight: 900;
-        font-size: 28px;
-        color: #fff;
         transform-origin: center center;
       }
       .time-text.sway::before {
         animation: sway 0.5s infinite;
       }
       .score-text {
-        font-size: 28px;
         display: inline-block;
-        color: #fff;
-        font-weight: 900;
-        padding-left: 100px;
+        padding-left: 50px;
       }
       @keyframes sway {
         0% {
@@ -127,7 +158,7 @@
           transform: rotate(-20deg);
         }
       }
-      /* game btns */
+
       #btns-wrap {
         margin-top: 20px;
       }
@@ -138,7 +169,7 @@
         cursor: pointer;
         background-color: transparent;
         font-size: 1.5rem;
-        font-weight: 900;
+        font-weight: 700;
         border-radius: 10px;
         background-color: rgb(214, 73, 51);
         color: rgb(43, 48, 58);
@@ -161,9 +192,6 @@
         font-size: 2.2rem;
         letter-spacing: 10px;
       }
-      .btn-pause {
-        display: none;
-      }
       .btns-bottom {
         display: flex;
         justify-content: space-between;
@@ -180,30 +208,13 @@
         <div class="score-text"></div>
       </div>
       <div id="game-wrap">
-        <table class="game-box">
-          <tr>
-            <td></td>
-            <td></td>
-            <td></td>
-          </tr>
-          <tr>
-            <td></td>
-            <td></td>
-            <td></td>
-          </tr>
-          <tr>
-            <td></td>
-            <td></td>
-            <td></td>
-          </tr>
-        </table>
-        <div class="mask">
-          <!-- 顯示對應的內容 -->
-        </div>
+        <table class="game-box"></table>
+        <div class="mask"></div>
+        <i class="mask-close far fa-times-circle"></i>
+        <div class="active-img"></div>
       </div>
       <div id="btns-wrap">
         <input class="btn btn-start" type="button" value="遊戲開始" />
-        <!-- <input class="btn btn-pause" type="button" value="暫停" /> -->
         <div class="btns-bottom">
           <input class="btn btn-restart" type="button" value="重新開始" />
           <input class="btn btn-highscore" type="button" value="最高分紀錄" />
@@ -214,65 +225,67 @@
 
     <!-- JS -->
     <script>
-      // DOM 元素 --------------------------------------------------------------------------------------------------------------
-      const gameBox = document.querySelector('.game-box'); // 遊戲格子的 <table>
-      const mask = document.querySelector('.mask'); // 暫停時的遮罩
-      let gameGrids = null; // 遊戲盒子的 <td>
+      // DOM 元素
+      const gameBox = document.querySelector('.game-box');
+      const mask = document.querySelector('.mask');
+      const maskCloseBtn = document.querySelector('.mask-close');
+      const btnsWrap = document.querySelector('#btns-wrap');
+      const btnStart = document.querySelector('.btn-start');
+      const timeLine = document.querySelector('.time-line');
+      const timeText = document.querySelector('.time-text');
+      const scoreText = document.querySelector('.score-text');
+      const activeImg = document.querySelector('.active-img');
+      let gameGrids = null;
 
-      const btnsWrap = document.querySelector('#btns-wrap'); // 所有按鈕容器
-      const btnStart = document.querySelector('.btn-start'); // 開始按鈕
-
-      const timeLine = document.querySelector('.time-line'); // 時間條
-      const timeText = document.querySelector('.time-text'); // 時間文字
-      const scoreText = document.querySelector('.score-text'); // 分數文字
-
-      // 遊戲變數 --------------------------------------------------------------------------------------------------------------
-      let isStartGame = false; // 遊戲是否開始
-      let gridsNum = 3; // table 初始為 3*3
-      let nowRound = 0; // 現在第幾關
-      let timer = null; // 計時器
-      let totalTime = 10; // 每場遊戲總時間
-      let gameTimeing = totalTime; // 遊戲倒數計時
-      let targetIndex = 0; // 正確盒子位置
-      let score = 0; // 紀錄分數
+      // 遊戲變數
       const addScore = 10;
       const loseScore = 2;
+      let score = 0;
+      let isInGame = false; // 是否在遊戲中
+      let gridsNum = 3; // 幾乘幾的方格
+      let nowRound = 0; // 現在第幾關
+      let timer = null;
+      let totalTime = 60; // 每場遊戲總時間 (秒)
+      let gameTimeing = totalTime;
+      let targetIndex = 0; // 正確方格的位置
       let highscore = { name: '', score: 0 };
       let highscoreStorage = JSON.parse(localStorage.getItem('highscore'));
-      console.log(highscoreStorage);
 
-      // mask 文本內容 --------------------------------------------------------------------------------------------------------------
-      const maskPauseText = '<h2>遊戲暫停...</h2>';
+      // 按鈕文字
+      const btnStartText = '遊戲開始';
+      const btnPauseText = '暫停';
+      const btnProceedText = '繼續遊戲';
+
+      // mask 文本內容
+      const maskPauseText = '<h2>遊戲暫停中</h2>';
       const maskRuleText = `
       <h2>試試你的眼力吧 !</h2>
-      <p>1. 找出唯一不同顏色的格子加 ${addScore} 分</p>
+      <p>1. 找出不同顏色的方塊加 ${addScore} 分</p>
       <p>2. 找錯扣 ${loseScore} 分</p>
       <p>3. 遊戲時間 ${totalTime} 秒</p>
       `;
-      const maskHighestScoreText = !highscoreStorage
-        ? '<p>還沒有最高分...</p>'
-        : `<h2>最高分 : ${highscore.score}</h2>
-        <p>玩家 : ${highscore.name}</p>`;
 
-      // 畫面初始化 --------------------------------------------------------------------------------------------------------------
+      // 初始化
       timeText.innerText = gameTimeing;
       scoreText.innerText = `分數 : ${score}`;
+      gameBox.classList.add('awaitStart');
+      gameBox.innerHTML = '找出不同顏色的方塊';
       if (highscoreStorage) {
         highscore = highscoreStorage;
       }
 
-      // Function --------------------------------------------------------------------------------------------------------------
-      // 取隨機整數
+      // Function
       function random(min, max) {
         return Math.floor(Math.random() * (max - min + 1) + min);
       }
 
       // 遊戲開始創建 table
-      function creatGrids(num) {
-        gameBox.innerHTML = ''; // 清空之前的表格
-        for (let i = 0; i < num; i++) {
+      function creatGrids(gridsNum) {
+        gameBox.classList.remove('awaitStart');
+        gameBox.innerHTML = '';
+        for (let i = 0; i < gridsNum; i++) {
           const tr = gameBox.insertRow(0);
-          for (let j = 0; j < num; j++) {
+          for (let j = 0; j < gridsNum; j++) {
             const td = tr.insertCell(0);
           }
         }
@@ -281,11 +294,11 @@
 
       // 遊戲開始隨機創建顏色設定給格子
       function randomColorGrids() {
-        if (!isStartGame) return; // 如果不再遊戲中則不執行
+        if (!isInGame) return;
         targetIndex = random(0, gameGrids.length - 1);
         const targetColor = [];
         const differentColor = [];
-        const differentValue = random(200 / (nowRound + 2), 200 / (nowRound + 2)) * (Math.random() > 0.5 ? 1 : -1);
+        const differentValue = (200 / (nowRound + 2)) * (Math.random() > 0.5 ? 1 : -1); // 取 200 / (現在回合數+2) * (1 or -1) 當作顏色差異值
         for (let i = 0; i < 3; i++) {
           const rgbValue = random(0, 255);
           targetColor[i] = rgbValue;
@@ -300,16 +313,30 @@
 
       // 遊戲倒數計時
       function timeHandler() {
-        gameTimeing--;
-        timeText.innerText = gameTimeing;
-        console.log(gameTimeing);
-        timeLine.style.width = `${(gameTimeing / totalTime) * 100}%`;
-        if (gameTimeing === 0) gameEnd();
+        if (gameTimeing === 0) {
+          gameEnd();
+        } else {
+          gameTimeing--;
+          timeText.innerText = gameTimeing;
+          timeLine.style.width = `${(gameTimeing / totalTime) * 100}%`; // 現在時間 / 總時間 *100 當作時間條寬度
+        }
       }
 
-      // 遊戲結束, 初始化遊戲
-      function gameEnd() {
-        isStartGame = false;
+      // 遊戲結束, 紀錄分數與初始化遊戲
+      function gameEnd(isRestart) {
+        if ((!highscoreStorage || highscoreStorage.score < score) && score > 0 && !isRestart) {
+          const playerName = prompt('恭喜得到最高分 ! 請輸入你的名字');
+          highscore.name = playerName || '路人甲';
+          highscore.score = score;
+          localStorage.setItem('highscore', JSON.stringify(highscore));
+        } else if (!isRestart) {
+          alert('沒有打破紀錄, 再試試看吧 ! ');
+        }
+        if (!isRestart) {
+          gameBox.innerHTML = '找出不同顏色的方塊';
+          gameBox.classList.add('awaitStart');
+        }
+        isInGame = false;
         gridsNum = 3;
         nowRound = 0;
         gameTimeing = totalTime;
@@ -317,80 +344,102 @@
         timeLine.style.width = '100%';
         score = 0;
         scoreText.innerText = `分數 : ${score}`;
-        btnStart.value = '遊戲開始';
-        creatGrids(gridsNum);
+        btnStart.value = btnStartText;
         clearInterval(timer);
-        if (!highscoreStorage || highscoreStorage.score < score)
-          highscoreStorage.localStorage.setItem('highscore', JSON.stringify(highscore));
+        timeText.classList.remove('sway');
       }
 
-      // Event --------------------------------------------------------------------------------------------------------------
+      // 判斷遊戲狀態是否暫停
+      function gameState(toggleType, maskContent) {
+        maskCloseBtn.classList.remove('show');
+        isInGame = toggleType ? true : false;
+        mask.style.zIndex = toggleType ? -1 : 1;
+        mask.style.opacity = toggleType ? 0 : 1;
+        if (maskContent) mask.innerHTML = maskContent;
+        isInGame ? timeText.classList.add('sway') : timeText.classList.remove('sway');
+      }
+
+      // 點擊正確或錯誤, 顯示想對應圖片動畫與音效
+      function activeAnimate(isCorrect) {
+        let activeAudio = new Audio(isCorrect ? './audio/correct.wav' : './audio/error.wav');
+        activeAudio.play();
+        activeImg.style.backgroundImage = `url("${isCorrect ? './images/correct' : './images/error'}.png")`;
+        activeImg.classList.add('animate__animated', 'animate__bounceIn');
+        activeImg.addEventListener('animationend', () => {
+          activeImg.classList.remove('animate__animated', 'animate__bounceIn');
+        });
+      }
+
+      // Event
       btnsWrap.addEventListener('click', (e) => {
         const thisClass = e.target.className;
         const thisValue = e.target.value;
         // 開始按鈕
         if (thisClass.includes('btn-start')) {
-          if (thisValue === '遊戲開始') {
-            isStartGame = true; // 遊戲中
+          if (thisValue === btnStartText) {
+            const startAudio = new Audio('./audio/start.mp3');
+            startAudio.play();
+            gameState(true);
             creatGrids(gridsNum); // 創建 3*3 格子
             randomColorGrids(); // 啟動遊戲, 每次隨機創建顏色格子
             timer = setInterval(timeHandler, 1000); // 遊戲時間倒數計時
-            mask.style.zIndex = -1;
-            mask.style.opacity = 0;
-            e.target.value = '暫停';
-          } else if (thisValue === '暫停') {
-            isStartGame = false;
+            e.target.value = btnPauseText;
+          } else if (thisValue === btnPauseText) {
+            gameState(false, maskPauseText);
             clearInterval(timer);
-            mask.innerHTML = maskPauseText;
-            mask.style.zIndex = 1;
-            mask.style.opacity = 0.9;
-
-            e.target.value = '繼續遊戲';
+            e.target.value = btnProceedText;
           } else {
-            isStartGame = true;
+            gameState(true);
             timer = setInterval(timeHandler, 1000);
-            mask.style.zIndex = -1;
-            mask.style.opacity = 0;
-            e.target.value = '暫停';
+            e.target.value = btnPauseText;
           }
         }
         // 重新開始按鈕
-        if (thisClass.includes('btn-restart')) {
-          gameEnd();
-          isStartGame = true;
+        else if (thisClass.includes('btn-restart') && btnStart.value !== btnStartText) {
+          gameEnd('restart');
+          gameState(true);
           randomColorGrids();
           timer = setInterval(timeHandler, 1000);
-          mask.style.zIndex = -1;
-          mask.style.opacity = 0;
-          btnStart.value = '暫停';
+          btnStart.value = btnPauseText;
         }
         // 規則按鈕
-        if (thisClass.includes('btn-rule') && !isStartGame) {
-          mask.innerHTML = maskRuleText;
-          mask.style.zIndex = 1;
-          mask.style.opacity = 0.9;
+        else if (thisClass.includes('btn-rule') && !isInGame) {
+          gameState(false, maskRuleText);
+          if (btnStart.value === btnStartText) maskCloseBtn.classList.add('show');
         }
         // 最高分紀錄按鈕
-        if (thisClass.includes('btn-highscore') && !isStartGame) {
-          mask.innerHTML = maskHighestScoreText;
-          mask.style.zIndex = 1;
-          mask.style.opacity = 0.9;
+        else if (thisClass.includes('btn-highscore') && !isInGame) {
+          highscoreStorage = JSON.parse(localStorage.getItem('highscore'));
+          const maskHighestScoreText = !highscoreStorage
+            ? '<h2>還沒有最高分...</h2>'
+            : `<h2>目前最高分 : ${highscore.score}</h2> <p>玩家 : ${highscore.name}</p>`;
+          gameState(false, maskHighestScoreText);
+          if (btnStart.value === btnStartText) maskCloseBtn.classList.add('show');
         }
       });
 
-      // 遊戲點擊時判斷是否有找出正確的顏色格子
+      // 遊戲中判斷是否點擊正確顏色的格子
       gameBox.addEventListener('click', (e) => {
-        if (e.target.tagName !== 'TD' || !isStartGame) return;
+        if (e.target.tagName !== 'TD' || !isInGame) return;
         if (e.target === gameGrids[targetIndex]) {
-          score += addScore; // 點對 +10 分
+          score += addScore;
           nowRound++;
           if (gridsNum < 9) gridsNum++;
           creatGrids(gridsNum);
           randomColorGrids();
+          activeAnimate(true);
         } else {
-          score -= loseScore; // 點錯 -2 分
+          score -= loseScore;
+          activeAnimate(false);
         }
         scoreText.innerText = `分數 : ${score}`;
+      });
+
+      // maskCloseBtn
+      maskCloseBtn.addEventListener('click', () => {
+        maskCloseBtn.classList.remove('show');
+        mask.style.zIndex = -1;
+        mask.style.opacity = 0;
       });
     </script>
   </body>
