@@ -175,7 +175,7 @@
         color: rgb(43, 48, 58);
         transition: 0.3s;
       }
-      .btn:hover {
+      .btn:not([disabled]):hover {
         color: rgb(214, 73, 51);
         background-color: transparent;
         transform: translateY(-10px);
@@ -195,6 +195,10 @@
       .btns-bottom {
         display: flex;
         justify-content: space-between;
+      }
+      .btn[disabled] {
+        text-decoration: line-through;
+        background-color: rgb(134, 134, 134);
       }
     </style>
   </head>
@@ -229,19 +233,22 @@
       const gameBox = document.querySelector('.game-box');
       const mask = document.querySelector('.mask');
       const maskCloseBtn = document.querySelector('.mask-close');
-      const btnsWrap = document.querySelector('#btns-wrap');
       const btnStart = document.querySelector('.btn-start');
+      const btnRestart = document.querySelector('.btn-restart');
+      const btnHighscore = document.querySelector('.btn-highscore');
+      const btnRule = document.querySelector('.btn-rule');
       const timeLine = document.querySelector('.time-line');
       const timeText = document.querySelector('.time-text');
       const scoreText = document.querySelector('.score-text');
       const activeImg = document.querySelector('.active-img');
-      let gameGrids = null;
 
       // 遊戲變數
       const addScore = 10;
       const loseScore = 2;
+      let gameGrids = null;
       let score = 0;
       let isInGame = false; // 是否在遊戲中
+      let isInGamePause = false; // 是否在遊戲中暫停, 給重新開始按鈕判斷用
       let gridsNum = 3; // 幾乘幾的方格
       let nowRound = 0; // 現在第幾關
       let timer = null;
@@ -249,7 +256,7 @@
       let gameTimeing = totalTime;
       let targetIndex = 0; // 正確方格的位置
       let highscore = { name: '', score: 0 };
-      let highscoreStorage = JSON.parse(localStorage.getItem('highscore'));
+      let highscoreStorage = JSON.parse(localStorage.getItem('highscore')); // 取得 localStorage 的最高分紀錄
 
       // 按鈕文字
       const btnStartText = '遊戲開始';
@@ -266,6 +273,7 @@
       `;
 
       // 初始化
+      btnRestart.disabled = true;
       timeText.innerText = gameTimeing;
       scoreText.innerText = `分數 : ${score}`;
       gameBox.classList.add('awaitStart');
@@ -322,13 +330,42 @@
         }
       }
 
+      // 判斷遊戲狀態是否暫停
+      function gameState(toggleType, maskContent) {
+        maskCloseBtn.classList.remove('show');
+        isInGame = toggleType;
+        mask.style.zIndex = toggleType ? -1 : 1;
+        mask.style.opacity = toggleType ? 0 : 1;
+        if (maskContent) mask.innerHTML = maskContent;
+        isInGame ? timeText.classList.add('sway') : timeText.classList.remove('sway');
+        btnDisabled(toggleType);
+      }
+
+      // 重新開始, 最高分紀錄, 遊戲規則 disabled 判斷
+      function btnDisabled(toggleType) {
+        btnHighscore.disabled = toggleType ? true : false;
+        btnRule.disabled = toggleType ? true : false;
+        btnRestart.disabled = toggleType || isInGamePause ? false : true;
+      }
+
+      // 點擊正確或錯誤, 顯示想對應圖片動畫與音效
+      function activeAnimate(isCorrect) {
+        let activeAudio = new Audio(isCorrect ? './audio/correct.wav' : './audio/error.wav');
+        activeAudio.play();
+        activeImg.style.backgroundImage = `url("${isCorrect ? './images/correct' : './images/error'}.png")`;
+        activeImg.classList.add('animate__animated', 'animate__bounceIn');
+        activeImg.addEventListener('animationend', () => {
+          activeImg.classList.remove('animate__animated', 'animate__bounceIn');
+        });
+      }
+
       // 遊戲結束, 紀錄分數與初始化遊戲
       function gameEnd(isRestart) {
         if ((!highscoreStorage || highscoreStorage.score < score) && score > 0 && !isRestart) {
           const playerName = prompt('恭喜得到最高分 ! 請輸入你的名字');
           highscore.name = playerName || '路人甲';
           highscore.score = score;
-          localStorage.setItem('highscore', JSON.stringify(highscore));
+          localStorage.setItem('highscore', JSON.stringify(highscore)); // 設定最高分存到 localStorage
         } else if (!isRestart) {
           alert('沒有打破紀錄, 再試試看吧 ! ');
         }
@@ -344,78 +381,64 @@
         timeLine.style.width = '100%';
         score = 0;
         scoreText.innerText = `分數 : ${score}`;
-        btnStart.value = btnStartText;
         clearInterval(timer);
         timeText.classList.remove('sway');
-      }
-
-      // 判斷遊戲狀態是否暫停
-      function gameState(toggleType, maskContent) {
-        maskCloseBtn.classList.remove('show');
-        isInGame = toggleType ? true : false;
-        mask.style.zIndex = toggleType ? -1 : 1;
-        mask.style.opacity = toggleType ? 0 : 1;
-        if (maskContent) mask.innerHTML = maskContent;
-        isInGame ? timeText.classList.add('sway') : timeText.classList.remove('sway');
-      }
-
-      // 點擊正確或錯誤, 顯示想對應圖片動畫與音效
-      function activeAnimate(isCorrect) {
-        let activeAudio = new Audio(isCorrect ? './audio/correct.wav' : './audio/error.wav');
-        activeAudio.play();
-        activeImg.style.backgroundImage = `url("${isCorrect ? './images/correct' : './images/error'}.png")`;
-        activeImg.classList.add('animate__animated', 'animate__bounceIn');
-        activeImg.addEventListener('animationend', () => {
-          activeImg.classList.remove('animate__animated', 'animate__bounceIn');
-        });
+        // Button 初始化
+        btnStart.value = btnStartText;
+        btnDisabled(isInGame);
       }
 
       // Event
-      btnsWrap.addEventListener('click', (e) => {
-        const thisClass = e.target.className;
-        const thisValue = e.target.value;
-        // 開始按鈕
-        if (thisClass.includes('btn-start')) {
-          if (thisValue === btnStartText) {
-            const startAudio = new Audio('./audio/start.mp3');
-            startAudio.play();
-            gameState(true);
-            creatGrids(gridsNum); // 創建 3*3 格子
-            randomColorGrids(); // 啟動遊戲, 每次隨機創建顏色格子
-            timer = setInterval(timeHandler, 1000); // 遊戲時間倒數計時
-            e.target.value = btnPauseText;
-          } else if (thisValue === btnPauseText) {
-            gameState(false, maskPauseText);
-            clearInterval(timer);
-            e.target.value = btnProceedText;
-          } else {
-            gameState(true);
-            timer = setInterval(timeHandler, 1000);
-            e.target.value = btnPauseText;
-          }
-        }
-        // 重新開始按鈕
-        else if (thisClass.includes('btn-restart') && btnStart.value !== btnStartText) {
-          gameEnd('restart');
+
+      // 開始, 暫停, 繼續 Button
+      btnStart.addEventListener('click', () => {
+        if (btnStart.value === btnStartText) {
+          const startAudio = new Audio('./audio/start.mp3');
+          startAudio.play();
           gameState(true);
-          randomColorGrids();
+          creatGrids(gridsNum); // 創建 3*3 格子
+          randomColorGrids(); // 啟動遊戲, 每次隨機創建顏色格子
+          timer = setInterval(timeHandler, 1000); // 遊戲時間倒數計時
+          btnStart.value = btnPauseText;
+        } else if (btnStart.value === btnPauseText) {
+          isInGamePause = true;
+          gameState(false, maskPauseText);
+          clearInterval(timer);
+          btnStart.value = btnProceedText;
+        } else {
+          isInGamePause = false;
+          gameState(true);
           timer = setInterval(timeHandler, 1000);
           btnStart.value = btnPauseText;
         }
-        // 規則按鈕
-        else if (thisClass.includes('btn-rule') && !isInGame) {
-          gameState(false, maskRuleText);
-          if (btnStart.value === btnStartText) maskCloseBtn.classList.add('show');
-        }
-        // 最高分紀錄按鈕
-        else if (thisClass.includes('btn-highscore') && !isInGame) {
-          highscoreStorage = JSON.parse(localStorage.getItem('highscore'));
-          const maskHighestScoreText = !highscoreStorage
-            ? '<h2>還沒有最高分...</h2>'
-            : `<h2>目前最高分 : ${highscore.score}</h2> <p>玩家 : ${highscore.name}</p>`;
-          gameState(false, maskHighestScoreText);
-          if (btnStart.value === btnStartText) maskCloseBtn.classList.add('show');
-        }
+      });
+
+      // 重新開始 Button
+      btnRestart.addEventListener('click', () => {
+        if (btnStart.value === btnStartText && !isInGame) return;
+        gameEnd('restart');
+        gameState(true);
+        randomColorGrids();
+        timer = setInterval(timeHandler, 1000);
+        btnStart.value = btnPauseText;
+      });
+
+      // 最高分紀錄 Button
+      btnHighscore.addEventListener('click', () => {
+        if (isInGame) return;
+        highscoreStorage = JSON.parse(localStorage.getItem('highscore'));
+        const maskHighestScoreText = highscoreStorage
+          ? `<h2>目前最高分 : ${highscore.score}</h2> <p>玩家 : ${highscore.name}</p>`
+          : '<h2>還沒有最高分...</h2>';
+        gameState(false, maskHighestScoreText);
+        if (btnStart.value === btnStartText) maskCloseBtn.classList.add('show');
+      });
+
+      // 規則 Button
+      btnRule.addEventListener('click', () => {
+        if (isInGame) return;
+        gameState(false, maskRuleText);
+        if (btnStart.value === btnStartText) maskCloseBtn.classList.add('show');
       });
 
       // 遊戲中判斷是否點擊正確顏色的格子
